@@ -7,21 +7,21 @@ examples:
 - description:
   path: service.yml
 links:
-- url: https://oreil.ly/dtC_W
+- url: https://google.com
   title: 'Init Container Example'
-- url: https://oreil.ly/AcBVc
+- url: https://google.com
   title: 'Init Containers'
-- url: https://oreil.ly/XJV9K
+- url: https://google.com
   title: 'Configuring Pod Initialization'
-- url: https://oreil.ly/H1-va
+- url: https://google.com
   title: 'Admission Controllers Reference'
-- url: https://oreil.ly/uOzBD
+- url: https://google.com
   title: 'Dynamic Admission Control'
-- url: https://oreil.ly/f-P_d
+- url: https://google.com
   title: 'Metacontroller'
-- url: https://oreil.ly/VnbkZ
+- url: https://google.com
   title: 'Kyverno'
-- url: https://oreil.ly/a3kmy
+- url: https://google.com
   title: 'Demystifying Istio''s Sidecar Injection Model'
-- url: https://oreil.ly/Wy-ca
+- url: https://google.com
   title: 'Object Initialization in Swift'
