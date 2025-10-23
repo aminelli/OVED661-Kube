@@ -16,6 +16,7 @@ spec:
         app: demo-app
       annotations:
         prometheus.io/scrape: "true"
+        # prometheus.io/port: "9113"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
@@ -38,20 +39,20 @@ spec:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 10
+          initialDelaySeconds: 20
           periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 10
+          initialDelaySeconds: 20
           periodSeconds: 5
         volumeMounts:
         - name: config
           mountPath: /usr/share/nginx/html
-        - name: exporter
-          mountPath: /usr/local/bin/nginx-prometheus-exporter
-          subPath: nginx-prometheus-exporter
+        # - name: exporter
+        #  mountPath: /usr/local/bin/nginx-prometheus-exporter
+        #  subPath: nginx-prometheus-exporter
         - name: nginx-config
           mountPath: /etc/nginx/conf.d/
           
@@ -61,7 +62,8 @@ spec:
         - containerPort: 9113
           name: metrics
         args: 
-        - -nginx.scrape-uri=http://localhost:80/stub_status
+        - -nginx.scrape-uri=http://localhost:8080/stub_status
+        #- -nginx.scrape-uri=http://localhost:80/stub_status
         resources:
           requests:
             memory: "32Mi"
@@ -93,9 +95,9 @@ data:
         location /stub_status {
             stub_status on;
             access_log off;
-            allow 127.0.0.1;
+            # allow 127.0.0.1;
             allow ::1;
-            deny all;
+            allow all;
         }
     }
 
