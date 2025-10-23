@@ -1,0 +1,425 @@
+---
+# ============================================
+# NAMESPACE
+# ============================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: myapp-production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: myapp-development
+---
+# ============================================
+# SERVICE ACCOUNTS
+# ============================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: viewer-sa
+  namespace: myapp-production
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: developer-sa
+  namespace: myapp-development
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-sa
+  namespace: myapp-production
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-admin-sa
+  namespace: kube-system
+---
+# ============================================
+# ROLE: READ-ONLY (Viewer)
+# Può solo visualizzare risorse, nessuna modifica
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: viewer-role
+  namespace: myapp-production
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - configmaps
+  - secrets
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: [""]
+  resources:
+  - pods/log
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: viewer-role-binding
+  namespace: myapp-production
+subjects:
+- kind: ServiceAccount
+  name: viewer-sa
+  namespace: myapp-production
+- kind: User
+  name: viewer-user
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: viewer-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ============================================
+# ROLE: DEVELOPER
+# Può creare, modificare, eliminare risorse
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developer-role
+  namespace: myapp-development
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - configmaps
+  - persistentvolumeclaims
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  - daemonsets
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+- apiGroups: [""]
+  resources:
+  - pods/exec
+  - pods/log
+  - pods/portforward
+  verbs:
+  - create
+  - get
+  - list
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developer-role-binding
+  namespace: myapp-development
+subjects:
+- kind: ServiceAccount
+  name: developer-sa
+  namespace: myapp-development
+- kind: User
+  name: developer-user
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: developers
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: developer-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ============================================
+# ROLE: NAMESPACE ADMIN
+# Controllo completo su un namespace specifico
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: namespace-admin-role
+  namespace: myapp-production
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: namespace-admin-binding
+  namespace: myapp-production
+subjects:
+- kind: ServiceAccount
+  name: admin-sa
+  namespace: myapp-production
+- kind: User
+  name: namespace-admin-user
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: namespace-admin-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ============================================
+# CLUSTERROLE: MONITORING
+# Può visualizzare metriche e nodi su tutto il cluster
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: monitoring-cluster-role
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/metrics
+  - nodes/stats
+  - persistentvolumes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: ["metrics.k8s.io"]
+  resources:
+  - nodes
+  - pods
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitoring-cluster-binding
+subjects:
+- kind: ServiceAccount
+  name: prometheus-sa
+  namespace: monitoring
+- kind: User
+  name: monitoring-user
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: monitoring-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ============================================
+# CLUSTERROLE: CLUSTER ADMIN
+# Accesso completo a tutto il cluster
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: full-cluster-admin-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+- nonResourceURLs: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: full-cluster-admin-binding
+subjects:
+- kind: ServiceAccount
+  name: cluster-admin-sa
+  namespace: kube-system
+- kind: User
+  name: cluster-admin-user
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: cluster-admins
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: full-cluster-admin-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ============================================
+# CLUSTERROLE: CI/CD DEPLOYER
+# Per pipeline di deployment automatiche
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cicd-deployer-role
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - configmaps
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - patch
+  - delete
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - statefulsets
+  - daemonsets
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - patch
+  - delete
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  verbs:
+  - create
+  - get
+  - list
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cicd-deployer-binding
+subjects:
+- kind: ServiceAccount
+  name: gitlab-runner-sa
+  namespace: gitlab
+- kind: ServiceAccount
+  name: github-actions-sa
+  namespace: cicd
+roleRef:
+  kind: ClusterRole
+  name: cicd-deployer-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# ============================================
+# ROLE: POD SECURITY ADMIN
+# Gestisce PodSecurityPolicies e NetworkPolicies
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: security-admin-role
+rules:
+- apiGroups: ["policy"]
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - patch
+  - delete
+  - use
+- apiGroups: ["networking.k8s.io"]
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - patch
+  - delete
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources:
+  - roles
+  - rolebindings
+  - clusterroles
+  - clusterrolebindings
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: security-admin-binding
+subjects:
+- kind: User
+  name: security-admin-user
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: security-team
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: security-admin-role
+  apiGroup: rbac.authorization.k8s.io
