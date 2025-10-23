@@ -1,0 +1,66 @@
+# ============================================
+# NFS STORAGE
+# Per storage condiviso tra nodi
+# ============================================
+
+# Abilita l'addon:
+# microk8s enable nfs
+
+# Prerequisito: server NFS configurato
+# Esempio configurazione NFS external:
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-nfs
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: 192.168.1.100
+    path: /export/microk8s
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-nfs
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# Deployment che usa NFS (multi-pod)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app-nfs
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+        - name: shared-storage
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: shared-storage
+        persistentVolumeClaim:
+          claimName: pvc-nfs
